@@ -13,14 +13,12 @@ type page int
 const (
 	homeView page = iota
 	detailView
-	replyView
 )
 
 type model struct {
 	currentPage page
 	homePage    *ui.HomePage
 	detailPage  *ui.DetailPage
-	replyPage   *ui.ReplyPage
 }
 
 func initialModel() model {
@@ -28,7 +26,6 @@ func initialModel() model {
 		currentPage: homeView,
 		homePage:    ui.NewHomePage(),
 		detailPage:  ui.NewDetailPage(),
-		replyPage:   ui.NewReplyPage(),
 	}
 }
 
@@ -43,10 +40,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		case "esc":
-			if m.currentPage == replyView {
-				m.currentPage = detailView
-				return m, nil
-			}
 			if m.currentPage == detailView {
 				m.currentPage = homeView
 				return m, nil
@@ -57,14 +50,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.currentPage = detailView
 					return m, m.detailPage.LoadTopic(*topic)
 				}
-			} else if m.currentPage == detailView {
-				if reply := m.detailPage.GetSelectedReply(); reply != nil {
-					m.currentPage = replyView
-					m.replyPage.LoadReply(*reply, m.detailPage.Topic.Replies)
-					return m, nil
-				}
 			}
 		}
+
 	case tea.MouseMsg:
 		switch msg.Type {
 		case tea.MouseLeft:
@@ -83,8 +71,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.homePage, cmd = m.homePage.Update(msg)
 	case detailView:
 		m.detailPage, cmd = m.detailPage.Update(msg)
-	case replyView:
-		m.replyPage, cmd = m.replyPage.Update(msg)
 	}
 	return m, cmd
 }
@@ -95,8 +81,6 @@ func (m model) View() string {
 		return m.homePage.View()
 	case detailView:
 		return m.detailPage.View()
-	case replyView:
-		return m.replyPage.View()
 	default:
 		return "Unknown view"
 	}

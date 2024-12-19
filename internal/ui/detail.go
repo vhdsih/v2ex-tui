@@ -2,25 +2,33 @@ package ui
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"v2ex-tui/internal/crawler"
 	"v2ex-tui/internal/model"
 
 	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/table"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"golang.org/x/term"
+)
+
+const (
+	ReserveSpaceHeight  = 5
+	ReserveSpaceWidth   = 0
+	ReserveSpaceContent = 10
 )
 
 type DetailPage struct {
 	Topic    model.Topic
-	table    table.Model
 	loading  bool
 	err      error
 	spinner  spinner.Model
 	crawler  *crawler.Crawler
 	selected int
+	viewport viewport.Model
 }
 
 func NewDetailPage() *DetailPage {
@@ -28,38 +36,20 @@ func NewDetailPage() *DetailPage {
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 
-	columns := []table.Column{
-		{Title: "序号", Width: 10},
-		{Title: "作者", Width: 15},
-		{Title: "内容", Width: 80},
-		{Title: "时间", Width: 20},
-		{Title: "回复数", Width: 10},
+	width, height, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		width = 100
+		height = 30
 	}
-
-	t := table.New(
-		table.WithColumns(columns),
-		table.WithFocused(true),
-		table.WithHeight(10),
-	)
-
-	s1 := table.DefaultStyles()
-	s1.Header = s1.Header.
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color("240")).
-		BorderBottom(true).
-		Bold(true)
-	s1.Selected = s1.Selected.
-		Foreground(lipgloss.Color("229")).
-		Background(lipgloss.Color("57")).
-		Bold(true)
-	t.SetStyles(s1)
+	vp := viewport.New(width-ReserveSpaceWidth, height-ReserveSpaceHeight)
+	vp.Style = lipgloss.NewStyle().Padding(1, 2)
 
 	return &DetailPage{
-		table:    t,
 		loading:  true,
 		spinner:  s,
 		crawler:  crawler.New(),
 		selected: 0,
+		viewport: vp,
 	}
 }
 
@@ -99,31 +89,17 @@ func (d *DetailPage) Update(msg tea.Msg) (*DetailPage, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "up", "down":
-			d.table, _ = d.table.Update(msg)
-			d.selected = d.table.Cursor()
+		case "up":
+			d.viewport.LineUp(1)
 			return d, nil
-		case "enter":
-			if !d.loading && len(d.Topic.Replies) > 0 {
-				return d, nil // 将在主程序中处理页面切换
-			}
+		case "down":
+			d.viewport.LineDown(1)
+			return d, nil
 		}
 
 	case topicDetailMsg:
 		d.loading = false
 		d.Topic = msg.topic
-
-		var rows []table.Row
-		for _, r := range d.Topic.Replies {
-			rows = append(rows, table.Row{
-				r.Number,
-				r.Author,
-				r.Content,
-				r.Time,
-				fmt.Sprintf("%d", r.ReplyCount),
-			})
-		}
-		d.table.SetRows(rows)
 		return d, nil
 
 	case errMsg:
@@ -135,6 +111,21 @@ func (d *DetailPage) Update(msg tea.Msg) (*DetailPage, tea.Cmd) {
 		var cmd tea.Cmd
 		d.spinner, cmd = d.spinner.Update(msg)
 		return d, cmd
+
+	case tea.WindowSizeMsg:
+		vp := viewport.New(msg.Width-ReserveSpaceWidth, msg.Height-ReserveSpaceHeight)
+		vp.Style = lipgloss.NewStyle().Padding(1, 2)
+		d.viewport = vp
+		return d, nil
+
+	case tea.MouseMsg:
+		switch msg.Type {
+		case tea.MouseWheelUp:
+			d.viewport.LineUp(3) // Scroll up by 3 lines
+		case tea.MouseWheelDown:
+			d.viewport.LineDown(3) // Scroll down by 3 lines
+		}
+		return d, nil
 	}
 
 	return d, nil
@@ -150,31 +141,72 @@ func (d *DetailPage) View() string {
 		return errorStyle.Render("Error: "+d.err.Error()) + "\n"
 	}
 
-	var s string
+	content := strings.Builder{}
+
 	// 标题区域
-	s += sectionStyle.Render(
-		titleStyle.Render(IconTitle+"标题: "+d.Topic.Title)+"\n"+
-			subtitleStyle.Render(IconAuthor+"作者: "+d.Topic.Author)+"\n"+
-			subtitleStyle.Render(IconTime+"时间: "+d.Topic.Time),
-	) + "\n"
+	content.WriteString(
+		titleStyle.Render(IconTitle+"标题: "+d.Topic.Title) + "\n" +
+			subtitleStyle.Render(IconAuthor+"作者: "+d.Topic.Author) + "\n" +
+			subtitleStyle.Render(IconTime+"时间: "+d.Topic.Time) + "\n")
 
 	// 内容区域
-	s += sectionStyle.Render(
-		titleStyle.Render(IconContent+"内容:")+"\n"+
-			contentStyle.Render(d.Topic.Content),
-	) + "\n"
+	content.WriteString(
+		titleStyle.Render(IconContent+"内容:") + "\n" +
+			contentStyle.Render(d.wrapText(d.Topic.Content)) + "\n",
+	)
 
 	// 评论区域
-	s += titleStyle.Render(IconComments+" 评论:") + "\n" +
-		tableStyle.Render(d.table.View()) + "\n\n" +
-		subtitleStyle.Render(IconBack+" esc 返回 | "+IconEnter+" enter 查看评论详情 | q 退出\n")
+	content.WriteString(titleStyle.Render(IconComments+"评论:") + "\n")
 
-	return s
+	// 格式化展示每条评论
+	for _, reply := range d.Topic.Replies {
+		content.WriteString(subtitleStyle.Render(fmt.Sprintf("%s%s 于 %s 回复:",
+			IconAuthor,
+			reply.Author,
+			reply.Time,
+		)) + "\n")
+
+		wrappedContent := d.wrapText(reply.Content)
+		content.WriteString(contentStyle.Render(wrappedContent) + "\n")
+	}
+
+	d.viewport.SetContent(content.String())
+
+	return d.viewport.View() + "\n" +
+		subtitleStyle.Render(IconBack+" esc 返回 | ↑↓ 滚动 | q 退出\n")
 }
 
-func (d *DetailPage) GetSelectedReply() *model.Reply {
-	if d.selected < len(d.Topic.Replies) {
-		return &d.Topic.Replies[d.selected]
+func (d *DetailPage) wrapText(text string) string {
+	// 处理空字符串情况
+	if text == "" {
+		return ""
 	}
-	return nil
+
+	// 设置实际可用宽度（考虑 padding 等）
+	maxWidth := d.viewport.Width - ReserveSpaceContent // 减去 padding 和一些边距
+	if maxWidth <= 0 {
+		maxWidth = 80 // 默认宽度
+	}
+
+	var lines []string
+	var currentLine string
+
+	// 按 UTF-8 字符分割，而不是按字节分割
+	chars := []rune(text)
+
+	for _, char := range chars {
+		currentWidth := lipgloss.Width(currentLine + string(char))
+		if currentWidth > maxWidth {
+			lines = append(lines, strings.TrimSpace(currentLine))
+			currentLine = string(char)
+		} else {
+			currentLine += string(char)
+		}
+	}
+
+	if currentLine != "" {
+		lines = append(lines, strings.TrimSpace(currentLine))
+	}
+
+	return strings.Join(lines, "\n")
 }
