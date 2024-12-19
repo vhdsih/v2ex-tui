@@ -151,6 +151,20 @@ func (h *HomePage) Update(msg tea.Msg) (*HomePage, tea.Cmd) {
 		}
 		h.table.SetColumns(columns)
 		return h, nil
+
+	case tea.MouseMsg:
+		switch msg.Type {
+		case tea.MouseLeft:
+			h.table, _ = h.table.Update(msg)
+			h.selected = h.table.Cursor()
+		case tea.MouseWheelUp:
+			h.table, _ = h.table.Update(tea.KeyMsg{Type: tea.KeyUp})
+			h.selected = h.table.Cursor()
+		case tea.MouseWheelDown:
+			h.table, _ = h.table.Update(tea.KeyMsg{Type: tea.KeyDown})
+			h.selected = h.table.Cursor()
+		}
+		return h, nil
 	}
 
 	return h, nil

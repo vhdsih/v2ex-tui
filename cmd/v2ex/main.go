@@ -65,6 +65,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
+	case tea.MouseMsg:
+		switch msg.Type {
+		case tea.MouseLeft:
+			if m.currentPage == homeView {
+				if topic := m.homePage.GetSelectedTopic(); topic != nil {
+					m.currentPage = detailView
+					return m, m.detailPage.LoadTopic(*topic)
+				}
+			}
+		}
 	}
 
 	var cmd tea.Cmd
@@ -93,7 +103,7 @@ func (m model) View() string {
 }
 
 func main() {
-	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
+	p := tea.NewProgram(initialModel(), tea.WithAltScreen(), tea.WithMouseAllMotion())
 	if _, err := p.Run(); err != nil {
 		fmt.Println("Error running program:", err)
 		return
