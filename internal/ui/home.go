@@ -18,6 +18,8 @@ type HomePage struct {
 	spinner  spinner.Model
 	crawler  *crawler.Crawler
 	selected int
+	width    int
+	height   int
 }
 
 func NewHomePage() *HomePage {
@@ -26,10 +28,10 @@ func NewHomePage() *HomePage {
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 
 	columns := []table.Column{
-		{Title: "📌 标题", Width: 100},
-		{Title: "👤 作者", Width: 15},
-		{Title: "💬 评论数", Width: 10},
-		{Title: "🕒 时间", Width: 20},
+		{Title: IconTitle + "标题", Width: 100},
+		{Title: IconAuthor + "作者", Width: 15},
+		{Title: IconComments + "评论数", Width: 10},
+		{Title: IconTime + "时间", Width: 20},
 	}
 
 	t := table.New(
@@ -57,6 +59,8 @@ func NewHomePage() *HomePage {
 		spinner:  s,
 		crawler:  crawler.New(),
 		selected: 0,
+		width:    0,
+		height:   0,
 	}
 }
 
@@ -120,6 +124,33 @@ func (h *HomePage) Update(msg tea.Msg) (*HomePage, tea.Cmd) {
 		var cmd tea.Cmd
 		h.spinner, cmd = h.spinner.Update(msg)
 		return h, cmd
+
+	case tea.WindowSizeMsg:
+		h.width = msg.Width
+		h.height = msg.Height
+
+		// 计算表格高度（减去标题、提示等占用的行数）
+		tableHeight := h.height - 10 // 减去标题行、底部提示等占用的空间
+		if tableHeight < 1 {
+			tableHeight = 1
+		}
+		h.table.SetHeight(tableHeight)
+
+		// 动态计算标题列宽度
+		titleWidth := h.width - 15 - 10 - 20 - 10 // 减去其他列的宽度和边距
+		if titleWidth < 20 {
+			titleWidth = 20
+		}
+
+		// 更新列宽度
+		columns := []table.Column{
+			{Title: IconTitle + "标题", Width: titleWidth},
+			{Title: IconAuthor + "作者", Width: 15},
+			{Title: IconComments + "评论数", Width: 10},
+			{Title: IconTime + "时间", Width: 20},
+		}
+		h.table.SetColumns(columns)
+		return h, nil
 	}
 
 	return h, nil
