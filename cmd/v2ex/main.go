@@ -16,9 +16,10 @@ const (
 )
 
 type model struct {
-	currentPage page
-	homePage    *ui.HomePage
-	detailPage  *ui.DetailPage
+	currentPage  page
+	homePage     *ui.HomePage
+	detailPage   *ui.DetailPage
+	mouseEnabled bool
 }
 
 func initialModel() model {
@@ -39,7 +40,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
-		case "esc":
+		case "backspace", " ":
 			if m.currentPage == detailView {
 				m.currentPage = homeView
 				return m, nil
@@ -50,6 +51,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.currentPage = detailView
 					return m, m.detailPage.LoadTopic(*topic)
 				}
+			}
+		case "m": // 假设使用 "m" 键切换鼠标支持
+			m.mouseEnabled = !m.mouseEnabled
+			if m.mouseEnabled {
+				return m, tea.EnableMouseCellMotion
+			} else {
+				return m, tea.DisableMouse
 			}
 		}
 

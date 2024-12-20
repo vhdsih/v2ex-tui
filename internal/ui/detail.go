@@ -8,6 +8,7 @@ import (
 	"v2ex-tui/internal/crawler"
 	"v2ex-tui/internal/model"
 
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -95,6 +96,12 @@ func (d *DetailPage) Update(msg tea.Msg) (*DetailPage, tea.Cmd) {
 		case "down":
 			d.viewport.LineDown(1)
 			return d, nil
+		case "f":
+			err := clipboard.WriteAll(d.Topic.URL)
+			if err != nil {
+				d.err = fmt.Errorf("failed to copy URL: %w", err)
+			}
+			return d, nil
 		}
 
 	case topicDetailMsg:
@@ -138,16 +145,16 @@ func (d *DetailPage) View() string {
 	}
 
 	if d.err != nil {
-		return errorStyle.Render("Error: "+d.err.Error()) + "\n"
+		return errorStyle.Render("Notification: "+d.err.Error()) + "\n"
 	}
 
 	content := strings.Builder{}
 
 	// 标题区域
 	content.WriteString(
-		titleStyle.Render(IconTitle+"标题: "+d.Topic.Title) + "\n" +
-			subtitleStyle.Render(IconAuthor+"作者: "+d.Topic.Author) + "\n" +
-			subtitleStyle.Render(IconTime+"时间: "+d.Topic.Time) + "\n")
+		titleStyle.Render(IconTitle+"话题: "+d.Topic.Title) + "\n" +
+			subtitleStyle.Render(IconAuthor+"楼主: "+d.Topic.Author) + "\n" +
+			subtitleStyle.Render(IconTime+"活跃时间: "+d.Topic.Time) + "\n")
 
 	// 内容区域
 	content.WriteString(
@@ -159,21 +166,25 @@ func (d *DetailPage) View() string {
 	content.WriteString(titleStyle.Render(IconComments+"评论:") + "\n")
 
 	// 格式化展示每条评论
-	for _, reply := range d.Topic.Replies {
-		content.WriteString(subtitleStyle.Render(fmt.Sprintf("%s%s 于 %s 回复:",
-			IconAuthor,
-			reply.Author,
-			reply.Time,
-		)) + "\n")
+	if len(d.Topic.Replies) > 0 {
+		for _, reply := range d.Topic.Replies {
+			content.WriteString(subtitleStyle.Render(fmt.Sprintf("%s%s 于 %s 回复:",
+				IconAuthor,
+				reply.Author,
+				reply.Time,
+			)) + "\n")
 
-		wrappedContent := d.wrapText(reply.Content)
-		content.WriteString(contentStyle.Render(wrappedContent) + "\n")
+			wrappedContent := d.wrapText(reply.Content)
+			content.WriteString(contentStyle.Render(wrappedContent) + "\n")
+		}
+	} else {
+		content.WriteString(contentStyle.Render("暂无评论") + "\n")
 	}
 
 	d.viewport.SetContent(content.String())
 
 	return d.viewport.View() + "\n" +
-		subtitleStyle.Render(IconBack+" esc 返回 | ↑↓ 滚动 | q 退出\n")
+		subtitleStyle.Render(IconBack+" 「空格」返回 | ↑↓ 滚动 ｜ f 复制链接 | q 退出 | "+IconMouse+" 支持鼠标操作(按 m 退出鼠标模式后可以选中文本)\n")
 }
 
 func (d *DetailPage) wrapText(text string) string {

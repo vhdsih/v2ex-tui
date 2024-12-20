@@ -51,4 +51,5 @@ var (
 	IconRefresh  = "🔄 "
 	IconBack     = "⬅️ "
 	IconEnter    = "⏎ "
+	IconMouse    = "🐭 "
 )

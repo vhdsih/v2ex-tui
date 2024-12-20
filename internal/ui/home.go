@@ -28,10 +28,10 @@ func NewHomePage() *HomePage {
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 
 	columns := []table.Column{
-		{Title: IconTitle + "标题", Width: 100},
-		{Title: IconAuthor + "作者", Width: 15},
+		{Title: IconTitle + "话题", Width: 100},
+		{Title: IconAuthor + "楼主", Width: 15},
 		{Title: IconComments + "评论数", Width: 10},
-		{Title: IconTime + "时间", Width: 20},
+		{Title: IconTime + "活跃时间", Width: 20},
 	}
 
 	t := table.New(
@@ -182,7 +182,7 @@ func (h *HomePage) View() string {
 
 	return titleStyle.Render("V2EX 热门话题") + "\n" +
 		tableStyle.Render(h.table.View()) + "\n\n" +
-		subtitleStyle.Render(IconRefresh+" r 刷新 | "+IconEnter+" enter 查看详情 | q 退出\n")
+		subtitleStyle.Render(IconRefresh+" r 刷新 | ↑↓ 滚动 |"+IconEnter+" enter 查看详情 | "+IconMouse+" 支持鼠标操作 | q 退出\n")
 }
 
 func (h *HomePage) GetSelectedTopic() *model.Topic {
