@@ -144,10 +144,10 @@ func (h *HomePage) Update(msg tea.Msg) (*HomePage, tea.Cmd) {
 
 		// 更新列宽度
 		columns := []table.Column{
-			{Title: IconTitle + "标题", Width: titleWidth},
-			{Title: IconAuthor + "作者", Width: 15},
+			{Title: IconTitle + "话题", Width: titleWidth},
+			{Title: IconAuthor + "楼主", Width: 15},
 			{Title: IconComments + "评论数", Width: 10},
-			{Title: IconTime + "时间", Width: 20},
+			{Title: IconTime + "活跃时间", Width: 20},
 		}
 		h.table.SetColumns(columns)
 		return h, nil
