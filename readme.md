@@ -22,17 +22,10 @@
 
 ### 如何启动
 
-1. 方法一：
-   a. 下载可执行文件：[https://github.com/kaolengmian7/v2ex-tui/releases](https://github.com/kaolengmian7/v2ex-tui/releases)
-   b. 双击执行
-   c. 在终端执行 `./mac_v2ex_tui`
-
-2. 方法二：克隆这个仓库(需要有 go 环境)：
-   ```bash
-   git clone https://github.com/yourusername/v2ex-tui.git
-   cd path/to/v2ex-tui
-   go run cmd/v2ex/main.go
-   
+1. 克隆这个仓库 or [下载该程序](https://github.com/kaolengmian7/v2ex-tui/releases)
+2. cd path/to/v2ex-tui/bin
+3. 运行 `./v2ex-tui`
+4. 如果你有 golang 环境，也可以找到 main 文件运行 `go run main.go`
 
 ### 命令介绍
 
