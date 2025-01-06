@@ -66,6 +66,9 @@ func (d *DetailPage) fetchTopicDetail() tea.Msg {
 		return errMsg{err}
 	}
 
+	// 返回详情页顶部
+	d.viewport.GotoTop()
+
 	// 统计每条评论的回复数
 	for i := range topic.Replies {
 		replyCount := 0
