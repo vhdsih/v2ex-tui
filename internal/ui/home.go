@@ -86,7 +86,7 @@ func (h *HomePage) Update(msg tea.Msg) (*HomePage, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "up", "down":
+		case "up", "down", "j", "k":
 			h.table, _ = h.table.Update(msg)
 			h.selected = h.table.Cursor()
 			return h, nil
